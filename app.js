@@ -48,20 +48,49 @@ app.get('/',(req,res)=>{
     res.status(200).send("Rest Apis")
 })
 
+// function for query paramenters to be passed 
+const getUser = async(query={})=>{
+    let col
+    if(query.columns){
+        col = query.columns
+        delete query.columns
+    }
+    const page = query.page?Number(query.page):1
+    delete query.page
+    const pageSize = query.pageSize?Number(query.pageSize):10
+    delete query.pageSize
+
+    try {
+
+            col = col?col.split(','):[];
+            console.log("page Size is "+pageSize)
+            console.log("page Number  is "+page)
+            console.log("We have skipped "+ (page-1)*pageSize+" records")
+            let customQuery = await userModel.find(query).skip((page-1)*pageSize).limit(pageSize)
+            // console.log(col)
+            return customQuery
+        } 
+        
+    catch (error) {
+        console.log(error)
+        throw new Error('Could not fetch error in function get User')
+    }
+} 
 
 
 // get method to fetch the data
 app.get('/users',async(req,res)=>{
-
+    
     try {
-        const users = await userModel.find({})
+        const users = await getUser(req.query)
+        if(users.length===0)
+            res.status(200).send("No records with the parameters")
+        else
         res.status(200).send(users)
     } catch (error) {
         console.log(error)
         res.status(500).send('Could not fetch')
     }
-
-   
 })
 
 
@@ -133,6 +162,9 @@ app.put('/users/:uid', async(req, res) => {
 
 
 
+
+
+
 // patch request to modify the data
 app.patch('/users/:uid', async(req, res) => { 
 
@@ -149,7 +181,6 @@ app.patch('/users/:uid', async(req, res) => {
         res.status(500).send('patch failed')
     }
     
-
 })
 
 
@@ -180,7 +211,9 @@ app.options('/users', (req, res) => {
     res.status(200).send("Options");
   });
 
-
+  app.use((req, res, next) => {
+    res.status(404).send('Route not found');
+});
 
 app.listen(5000,()=>{
     console.log('Server is running at http://127.0.0.1:5000')
